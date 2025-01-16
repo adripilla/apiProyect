@@ -25,36 +25,34 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Actualizar miembros de un proyecto (agregar)
 router.put('/:id/miembros', async (req, res) => {
-  const { id } = req.params;
-  const { miembros } = req.body; // Miembros es un array de nombres de miembros
+    const { id } = req.params;
+    const { miembros } = req.body; // Miembros es un array de IDs de miembros
   
-  try {
-    const proyecto = await Proyecto.findById(id);
-    if (!proyecto) {
-      return res.status(404).json({ error: 'Proyecto no encontrado' });
+    try {
+      // Buscar el proyecto por ID
+      const proyecto = await Proyecto.findById(id);
+      if (!proyecto) {
+        return res.status(404).json({ error: 'Proyecto no encontrado' });
+      }
+  
+      // Buscar los miembros por sus IDs
+      const miembrosEncontrados = await Miembro.find({ '_id': { $in: miembros } });
+  
+      // Asegúrate de que todos los miembros estén en la base de datos
+      if (miembrosEncontrados.length !== miembros.length) {
+        return res.status(404).json({ error: 'Algunos miembros no fueron encontrados en la base de datos' });
+      }
+  
+      // Agregar los miembros al proyecto (sin duplicados)
+      proyecto.miembros = [...new Set([...proyecto.miembros, ...miembros])];
+  
+      await proyecto.save();
+      res.json(proyecto);
+    } catch (err) {
+      res.status(400).json({ error: 'Error al actualizar miembros' });
     }
-
-    // Buscar los miembros por su nombre (puedes cambiar esto si prefieres algo diferente)
-    const miembrosEncontrados = await Miembro.find({ nombre: { $in: miembros } });
-
-    // Asegúrate de que todos los miembros estén en la base de datos
-    if (miembrosEncontrados.length !== miembros.length) {
-      return res.status(404).json({ error: 'Algunos miembros no fueron encontrados en la base de datos' });
-    }
-
-    // Obtener los ObjectIds de los miembros encontrados
-    const miembrosIds = miembrosEncontrados.map(miembro => miembro._id);
-
-    // Agregar los miembros al proyecto (sin duplicados)
-    proyecto.miembros = [...new Set([...proyecto.miembros, ...miembrosIds])];
-
-    await proyecto.save();
-    res.json(proyecto);
-  } catch (err) {
-    res.status(400).json({ error: 'Error al actualizar miembros' });
-  }
-});
+  });
+  
 
 module.exports = router;
